@@ -1,0 +1,26 @@
+{
+  "name": "selfbeer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GianlucaMinoprio/selfbeer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GianlucaMinoprio/selfbeer/issues"
+  },
+  "homepage": "https://github.com/GianlucaMinoprio/selfbeer#readme",
+  "dependencies": {
+    "@selfxyz/core": "^1.1.0-beta.7",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "pigpio": "^3.3.1"
+  }
+}
