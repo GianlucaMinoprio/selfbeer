@@ -13,9 +13,13 @@ const PORT = process.env.PORT || 3000;
 const RELAY_GPIO = Number(process.env.RELAY_GPIO || 26);
 const POUR_MS = Number(process.env.POUR_MS || 15000);
 const MINIMUM_AGE = Number(process.env.MINIMUM_AGE || 21); // 21 for US, 18 for Europe
-const ENDPOINT_URL = process.env.ENDPOINT_URL || 'https://selfbeer.ngrok.app/api/verify';
+const NGROK_AUTHTOKEN = process.env.NGROK_AUTHTOKEN || '';
+const NGROK_DOMAIN = process.env.NGROK_DOMAIN || ''; // optional: fixed ngrok domain
 const STATUS_WEBHOOK_URL = process.env.STATUS_WEBHOOK_URL || '';
 const LCD_ADDRESS = parseInt(process.env.LCD_ADDRESS || '0x27', 16);
+
+// resolved after ngrok starts
+let endpointUrl = process.env.ENDPOINT_URL || '';
 
 // --- LCD setup (graceful fallback if not connected) ---
 let lcd = null;
@@ -61,20 +65,52 @@ function postStatus(status) {
   }).catch(() => {});
 }
 
-// --- Self verifier ---
-const verifier = new SelfBackendVerifier(
-  'beer',
-  ENDPOINT_URL,
-  false,
-  AllIds,
-  new DefaultConfigStore({ minimumAge: MINIMUM_AGE }),
-  'uuid'
-);
+// --- Self verifier (created after ngrok URL is known) ---
+let verifier = null;
+
+function initVerifier(url) {
+  endpointUrl = url;
+  verifier = new SelfBackendVerifier(
+    'beer',
+    endpointUrl,
+    false,
+    AllIds,
+    new DefaultConfigStore({ minimumAge: MINIMUM_AGE }),
+    'uuid'
+  );
+  console.log(`Verifier endpoint: ${endpointUrl}`);
+}
+
+// --- ngrok tunnel ---
+async function startNgrok() {
+  if (!NGROK_AUTHTOKEN) {
+    console.log('NGROK_AUTHTOKEN not set, skipping tunnel');
+    if (endpointUrl) initVerifier(endpointUrl);
+    return;
+  }
+  try {
+    const ngrok = require('@ngrok/ngrok');
+    const opts = { addr: PORT, authtoken: NGROK_AUTHTOKEN };
+    if (NGROK_DOMAIN) opts.domain = NGROK_DOMAIN;
+    const listener = await ngrok.forward(opts);
+    const url = listener.url() + '/api/verify';
+    initVerifier(url);
+    lcdWrite('SelfBeer v1', 'Tunnel ready');
+    console.log(`ngrok tunnel: ${listener.url()}`);
+  } catch (e) {
+    console.error('ngrok failed:', e.message);
+    if (endpointUrl) initVerifier(endpointUrl);
+  }
+}
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 app.post('/api/verify', async (req, res) => {
+  if (!verifier) {
+    return res.status(503).json({ status: 'error', result: false, reason: 'Server starting up, try again in a moment.' });
+  }
+
   try {
     if (pouring) {
       return res.status(200).json({
@@ -112,17 +148,6 @@ app.post('/api/verify', async (req, res) => {
         status: 'error',
         result: false,
         reason: 'You are too young for a beer',
-      });
-    }
-
-    const cid = String(r?.configId || '').toLowerCase();
-    if (cid && cid !== CONFIG_ID) {
-      lcdWrite('Config error', 'Wrong keg!');
-      setTimeout(() => lcdWrite('SelfBeer v1', 'Ready...'), 5000);
-      return res.status(200).json({
-        status: 'error',
-        result: false,
-        reason: 'Config mismatch! Someone tried to open a different keg.',
       });
     }
 
@@ -174,6 +199,7 @@ app.post('/api/verify', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`listening on ${PORT} (GPIO ${RELAY_GPIO}, pour ${POUR_MS}ms)`);
+  await startNgrok();
 });
