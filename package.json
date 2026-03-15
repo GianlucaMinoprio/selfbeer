@@ -21,6 +21,7 @@
     "@selfxyz/core": "^1.1.0-beta.7",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "lcdi2c": "^0.6.0",
     "pigpio": "^3.3.1"
   }
 }

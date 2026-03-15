@@ -1,7 +1,7 @@
 // CommonJS to avoid ESM flags
 const { Gpio } = require('pigpio');
 
-const RELAY_GPIO = Number(process.env.RELAY_GPIO || 5); // set to your jumper pin
+const RELAY_GPIO = Number(process.env.RELAY_GPIO || 26); // relay board channel 1
 const PULSE_MS   = Number(process.env.PULSE_MS || 500); // how long to open
 
 console.log('Using GPIO', RELAY_GPIO, 'Pulse', PULSE_MS, 'ms');

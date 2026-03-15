@@ -1,0 +1,12 @@
+[Unit]
+Description=SelfBeer WiFi fallback hotspot
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/gianluk/selfbeer/scripts/wifi-fallback.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
