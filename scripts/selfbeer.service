@@ -1,0 +1,15 @@
+[Unit]
+Description=SelfBeer Server
+After=network.target pigpiod.service
+
+[Service]
+ExecStartPre=/usr/local/bin/pigpiod
+ExecStart=/usr/bin/node /home/gianluk/selfbeer/index.js
+WorkingDirectory=/home/gianluk/selfbeer
+Restart=always
+RestartSec=5
+User=root
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
