@@ -8,6 +8,8 @@ import {
   type SelfApp,
 } from '@selfxyz/qrcode';
 
+const MINIMUM_AGE = Number(process.env.NEXT_PUBLIC_MINIMUM_AGE || 21); // 21 for US, 18 for Europe
+
 export default function Home() {
   // Generate a UUID for the user (client-side only to avoid hydration mismatch)
   // In a real app, this would be your actual user ID from your auth system
@@ -38,10 +40,7 @@ export default function Home() {
         userIdType: 'uuid',
         userDefinedData: 'beerSession',
         disclosures: {
-          minimumAge: 21,
-          // Add more disclosure fields as needed:
-          // nationality: true,
-          // gender: true,
+          minimumAge: MINIMUM_AGE,
         },
       }).build();
     } catch (error) {
@@ -60,7 +59,7 @@ export default function Home() {
   }, [selfApp]);
 
   const handleSuccessfulVerification = () => {
-    console.log('Verification successful! User is 21+');
+    console.log(`Verification successful! User is ${MINIMUM_AGE}+`);
     // Handle successful verification here
   };
 
@@ -78,7 +77,7 @@ export default function Home() {
       minHeight: '100vh',
     }}>
       <h1>SelfBeer - Proof of Age</h1>
-      <p>Scan the QR code with the Self app to verify you are 21+</p>
+      <p>Scan the QR code with the Self app to verify you are {MINIMUM_AGE}+</p>
       
       {selfApp ? (
         <div style={{ marginTop: 20 }}>

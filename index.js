@@ -12,7 +12,7 @@ const {
 const PORT = process.env.PORT || 3000;
 const RELAY_GPIO = Number(process.env.RELAY_GPIO || 26);
 const POUR_MS = Number(process.env.POUR_MS || 15000);
-const CONFIG_ID = (process.env.CONFIG_ID || '0xd38655ad3441438e768552b40f8e068ff26a04343093483b3872a3bacfc50173').toLowerCase();
+const MINIMUM_AGE = Number(process.env.MINIMUM_AGE || 21); // 21 for US, 18 for Europe
 const ENDPOINT_URL = process.env.ENDPOINT_URL || 'https://selfbeer.ngrok.app/api/verify';
 const STATUS_WEBHOOK_URL = process.env.STATUS_WEBHOOK_URL || '';
 const LCD_ADDRESS = parseInt(process.env.LCD_ADDRESS || '0x27', 16);
@@ -67,7 +67,7 @@ const verifier = new SelfBackendVerifier(
   ENDPOINT_URL,
   false,
   AllIds,
-  new DefaultConfigStore({ minimumAge: 21 }),
+  new DefaultConfigStore({ minimumAge: MINIMUM_AGE }),
   'uuid'
 );
 
@@ -105,7 +105,7 @@ app.post('/api/verify', async (req, res) => {
       hasAge;
 
     if (!ok) {
-      lcdWrite('Access denied', 'Must be 21+');
+      lcdWrite('Access denied', `Must be ${MINIMUM_AGE}+`);
       postStatus('underage');
       setTimeout(() => lcdWrite('SelfBeer v1', 'Ready...'), 5000);
       return res.status(200).json({
