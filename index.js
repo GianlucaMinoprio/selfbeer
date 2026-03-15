@@ -21,7 +21,7 @@ const LCD_ADDRESS = parseInt(process.env.LCD_ADDRESS || '0x27', 16);
 let lcd = null;
 async function initLcd() {
   try {
-    const { LCD } = require('raspberrypi-liquid-crystal');
+    const LCD = require('raspberrypi-liquid-crystal');
     lcd = new LCD(1, LCD_ADDRESS, 16, 2);
     await lcd.begin();
     await lcd.clearAsync();
