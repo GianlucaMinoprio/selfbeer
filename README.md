@@ -20,10 +20,10 @@ Scan. Prove your age. Pour a beer. No ID shown, no data stored.
                            └──────────────┘
 ```
 
-1. User scans the printed QR code with the **Self** app
+1. User scans a QR code with the **Self** app (see [QR Display Modes](#qr-display-modes) below)
 2. Self generates a zero-knowledge proof that age >= 21 (no personal data leaves the phone)
 3. Proof is sent to the Pi server via a Cloudflare Tunnel
-4. Server verifies proof, opens relay for 15 seconds, beer pours. LCD shows countdown.
+4. Server verifies proof, opens relay for 15 seconds, beer pours
 
 ---
 
@@ -359,9 +359,45 @@ sudo reboot
 
 ---
 
-## Printed QR Code
+## QR Display Modes
 
-The Self.xyz QR code encodes fixed parameters (scope, endpoint, minimum age). Since these don't change, you can **print the QR code once** and reuse it permanently.
+You have two options for how users scan the QR code. Choose based on your setup:
+
+### Option A: iPad / Tablet (Dynamic QR)
+
+A Next.js web app (`web/`) that displays a live QR code on a tablet next to the tap. Each scan generates a unique session, and the page shows real-time verification status and animations.
+
+**Best for**: events, bars, demos where you want a polished experience.
+
+```bash
+# On your Mac or any machine (can also deploy to Vercel)
+cd web
+cp .env.example .env
+# Edit .env with your tunnel URL
+npm install
+npm run dev
+```
+
+Open the page on an iPad in fullscreen (Safari > Add to Home Screen). Environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_ENDPOINT_URL` | Your Pi's public tunnel URL (e.g., `https://selfbeer.ngrok.app/api/verify`) |
+| `NEXT_PUBLIC_LOGO_URL` | Logo shown in the QR code |
+
+**Deploy to Vercel** (recommended for production):
+
+```bash
+cd web
+npx vercel
+# Set the environment variables in the Vercel dashboard
+```
+
+### Option B: Printed QR Code (Static)
+
+Generate a fixed QR code and print it. Tape it to the keg. No tablet needed.
+
+**Best for**: simple setups, permanent installations, low-tech venues.
 
 Generate the QR using the [`@selfxyz/qrcode`](https://docs.self.xyz) package or the Self developer dashboard with these parameters:
 
@@ -371,7 +407,7 @@ Generate the QR using the [`@selfxyz/qrcode`](https://docs.self.xyz) package or 
 
 Print the QR and place it next to the tap. Users scan it with the Self app on their phone.
 
-> The tunnel must be running for the QR to work — it still points to your Pi's public endpoint.
+> With a printed QR, consider adding the LCD display so users get visual feedback ("Verifying...", "Pouring!", countdown).
 
 ---
 
