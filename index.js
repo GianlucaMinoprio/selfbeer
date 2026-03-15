@@ -19,23 +19,28 @@ const LCD_ADDRESS = parseInt(process.env.LCD_ADDRESS || '0x27', 16);
 
 // --- LCD setup (graceful fallback if not connected) ---
 let lcd = null;
-try {
-  const LCD = require('lcdi2c');
-  lcd = new LCD(1, LCD_ADDRESS, 16, 2);
-  lcd.clear();
-  lcd.println('SelfBeer v1', 1);
-  lcd.println('Ready...', 2);
-  console.log(`LCD initialised at 0x${LCD_ADDRESS.toString(16)}`);
-} catch (e) {
-  console.log('LCD not available, running without display:', e.message);
+async function initLcd() {
+  try {
+    const { LCD } = require('raspberrypi-liquid-crystal');
+    lcd = new LCD(1, LCD_ADDRESS, 16, 2);
+    await lcd.begin();
+    await lcd.clearAsync();
+    await lcd.printLineAsync(0, 'SelfBeer v1');
+    await lcd.printLineAsync(1, 'Ready...');
+    console.log(`LCD initialised at 0x${LCD_ADDRESS.toString(16)}`);
+  } catch (e) {
+    console.log('LCD not available, running without display:', e.message);
+  }
 }
+initLcd();
 
 function lcdWrite(line1, line2) {
   if (!lcd) return;
   try {
-    lcd.clear();
-    if (line1) lcd.println(line1.slice(0, 16), 1);
-    if (line2) lcd.println(line2.slice(0, 16), 2);
+    lcd.clearAsync().then(() => {
+      if (line1) lcd.printLineAsync(0, line1.slice(0, 16));
+      if (line2) lcd.printLineAsync(1, line2.slice(0, 16));
+    });
   } catch (_) {}
 }
 
