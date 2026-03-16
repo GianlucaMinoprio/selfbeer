@@ -1,9 +1,9 @@
 [Unit]
 Description=SelfBeer Server
-After=network.target pigpiod.service
+After=network.target
 
 [Service]
-ExecStartPre=/usr/local/bin/pigpiod
+ExecStartPre=/bin/sh -c 'killall pigpiod 2>/dev/null; sleep 1; true'
 ExecStart=/usr/bin/node /home/gianluk/selfbeer/index.js
 WorkingDirectory=/home/gianluk/selfbeer
 Restart=always
