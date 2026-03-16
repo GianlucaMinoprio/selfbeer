@@ -1,48 +1,35 @@
 import { NextResponse } from 'next/server';
-import { Redis } from '@upstash/redis';
 
-const redis = Redis.fromEnv();
+// In-memory state — works on Vercel because the same warm instance
+// handles both the POST from the Pi and the rapid GET polls from the browser
+let beerMachineStatus: 'open' | 'closed' | 'underage' = 'closed';
+let openedAt: number | null = null;
+let closeTimeout: NodeJS.Timeout | null = null;
 
-const AUTO_CLOSE_DURATION = 30000; // 30 seconds
-const UNDERAGE_MESSAGE_DURATION = 5000; // 5 seconds
-
-const KEY = 'selfbeer:status';
-
-interface StatusData {
-  status: 'open' | 'closed' | 'underage';
-  openedAt: number | null;
-}
-
-async function getStatus(): Promise<StatusData> {
-  const data = await redis.get<StatusData>(KEY);
-  return data ?? { status: 'closed', openedAt: null };
-}
+const AUTO_CLOSE_DURATION = 30000;
+const UNDERAGE_MESSAGE_DURATION = 5000;
 
 export async function GET() {
-  const data = await getStatus();
-  let { status, openedAt } = data;
   let remainingTime = null;
 
-  if (status === 'open' && openedAt) {
+  if (beerMachineStatus === 'open' && openedAt) {
     const elapsed = Date.now() - openedAt;
     remainingTime = Math.max(0, AUTO_CLOSE_DURATION - elapsed);
     if (remainingTime === 0) {
-      status = 'closed';
+      beerMachineStatus = 'closed';
       openedAt = null;
-      await redis.set(KEY, { status, openedAt });
     }
-  } else if (status === 'underage' && openedAt) {
+  } else if (beerMachineStatus === 'underage' && openedAt) {
     const elapsed = Date.now() - openedAt;
     remainingTime = Math.max(0, UNDERAGE_MESSAGE_DURATION - elapsed);
     if (remainingTime === 0) {
-      status = 'closed';
+      beerMachineStatus = 'closed';
       openedAt = null;
-      await redis.set(KEY, { status, openedAt });
     }
   }
 
   return NextResponse.json({
-    status,
+    status: beerMachineStatus,
     timestamp: new Date().toISOString(),
     remainingTime,
     openedAt: openedAt ? new Date(openedAt).toISOString() : null,
@@ -61,14 +48,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const openedAt = status === 'closed' ? null : Date.now();
-    // Auto-expire the key so it self-cleans
-    const ttl = status === 'open' ? AUTO_CLOSE_DURATION / 1000 : status === 'underage' ? UNDERAGE_MESSAGE_DURATION / 1000 : 0;
+    beerMachineStatus = status;
 
-    if (status === 'closed') {
-      await redis.set(KEY, { status, openedAt });
+    if (closeTimeout) {
+      clearTimeout(closeTimeout);
+      closeTimeout = null;
+    }
+
+    if (status === 'open') {
+      openedAt = Date.now();
+      closeTimeout = setTimeout(() => {
+        beerMachineStatus = 'closed';
+        openedAt = null;
+        closeTimeout = null;
+      }, AUTO_CLOSE_DURATION);
+    } else if (status === 'underage') {
+      openedAt = Date.now();
+      closeTimeout = setTimeout(() => {
+        beerMachineStatus = 'closed';
+        openedAt = null;
+        closeTimeout = null;
+      }, UNDERAGE_MESSAGE_DURATION);
     } else {
-      await redis.set(KEY, { status, openedAt }, { ex: Math.ceil(ttl) + 5 });
+      openedAt = null;
     }
 
     let remainingTime = null;
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
     else if (status === 'underage') remainingTime = UNDERAGE_MESSAGE_DURATION;
 
     return NextResponse.json({
-      status,
+      status: beerMachineStatus,
       timestamp: new Date().toISOString(),
       remainingTime,
       openedAt: openedAt ? new Date(openedAt).toISOString() : null,
