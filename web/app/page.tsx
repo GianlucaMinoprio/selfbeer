@@ -6,7 +6,7 @@ import Image from "next/image";
 import { getUniversalLink } from "@selfxyz/core";
 
 const MINIMUM_AGE = Number(process.env.NEXT_PUBLIC_MINIMUM_AGE || 21);
-const POUR_DURATION = 15000; // match backend POUR_MS
+const POUR_DURATION = 30000; // match backend POUR_MS
 
 export default function BeerSemaphore() {
   const [status, setStatus] = useState<"open" | "closed" | "underage">(
