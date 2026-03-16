@@ -3,7 +3,7 @@
 # Used so you can configure WiFi from your phone when moving the Pi to a new venue.
 
 HOTSPOT_SSID="SelfBeer-Setup"
-HOTSPOT_PASS="pourme123"
+HOTSPOT_PASS="${SELFBEER_HOTSPOT_PASS:-changeme}"
 WAIT_SECONDS=60
 PORTAL_SCRIPT="$(dirname "$0")/wifi-portal.js"
 

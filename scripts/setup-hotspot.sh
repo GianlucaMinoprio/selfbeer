@@ -4,7 +4,7 @@
 
 if [ $# -lt 2 ]; then
   echo "Usage: sudo bash scripts/setup-hotspot.sh <SSID> <PASSWORD>"
-  echo "Example: sudo bash scripts/setup-hotspot.sh \"Iphone GL\" \"mypassword\""
+  echo "Example: sudo bash scripts/setup-hotspot.sh \"My Phone\" \"mypassword\""
   exit 1
 fi
 

@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 ExecStartPre=/bin/sh -c 'killall pigpiod 2>/dev/null; sleep 1; true'
-ExecStart=/usr/bin/node /home/gianluk/selfbeer/index.js
-WorkingDirectory=/home/gianluk/selfbeer
+ExecStart=/usr/bin/node /home/pi/selfbeer/index.js
+WorkingDirectory=/home/pi/selfbeer
 Restart=always
 RestartSec=5
 User=root

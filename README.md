@@ -125,7 +125,7 @@ The LCD has 4 pins. Connect them to the **relay board's pass-through pins** (the
 4. Click the **gear icon** (⚙) to configure:
    - Hostname: `selfbeer`
    - Enable SSH (use password authentication)
-   - Set username: `gianluk` (or your preference)
+   - Set username: `pi` (or your preference)
    - Set password
    - Configure WiFi: enter your network SSID and password
    - Set locale/timezone
@@ -134,13 +134,13 @@ The LCD has 4 pins. Connect them to the **relay board's pass-through pins** (the
 ### 2. Connect via SSH
 
 ```bash
-ssh gianluk@selfbeer.local
+ssh pi@selfbeer.local
 ```
 
 If `.local` doesn't resolve, find the Pi's IP on your router and use:
 
 ```bash
-ssh gianluk@<PI_IP_ADDRESS>
+ssh pi@<PI_IP_ADDRESS>
 ```
 
 ### 3. System Setup
@@ -260,7 +260,7 @@ cloudflared tunnel route dns selfbeer selfbeer.yourdomain.com
 mkdir -p ~/.cloudflared
 cat > ~/.cloudflared/config.yml << 'EOF'
 tunnel: selfbeer
-credentials-file: /home/gianluk/.cloudflared/<TUNNEL_ID>.json
+credentials-file: /home/pi/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
   - hostname: selfbeer.yourdomain.com
@@ -303,9 +303,9 @@ Wants=network-online.target
 
 [Service]
 User=root
-WorkingDirectory=/home/gianluk/selfbeer
-EnvironmentFile=/home/gianluk/selfbeer/.env
-ExecStart=/usr/bin/node /home/gianluk/selfbeer/index.js
+WorkingDirectory=/home/pi/selfbeer
+EnvironmentFile=/home/pi/selfbeer/.env
+ExecStart=/usr/bin/node /home/pi/selfbeer/index.js
 Restart=always
 RestartSec=2
 
@@ -323,7 +323,7 @@ Description=Cloudflare Tunnel for SelfBeer
 After=network-online.target selfbeer.service
 
 [Service]
-User=gianluk
+User=pi
 ExecStart=/usr/local/bin/cloudflared tunnel run selfbeer
 Restart=always
 RestartSec=5
@@ -450,7 +450,7 @@ When you move the Pi to a new venue where it can't find any known WiFi, you need
 
 **How it works:**
 1. Pi boots and waits 60 seconds for a WiFi connection
-2. If no connection, it creates a hotspot called **`SelfBeer-Setup`** (password: `pourme123`)
+2. If no connection, it creates a hotspot called **`SelfBeer-Setup`** (password: set via `SELFBEER_HOTSPOT_PASS` env var, default: `changeme`)
 3. Connect to the hotspot from your phone
 4. Open a browser → you'll see a WiFi configuration page
 5. Select the venue's WiFi, enter the password, submit

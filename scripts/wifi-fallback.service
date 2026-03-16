@@ -5,7 +5,7 @@ Wants=NetworkManager.service
 
 [Service]
 Type=oneshot
-ExecStart=/home/gianluk/selfbeer/scripts/wifi-fallback.sh
+ExecStart=/home/pi/selfbeer/scripts/wifi-fallback.sh
 RemainAfterExit=no
 
 [Install]
