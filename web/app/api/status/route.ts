@@ -1,78 +1,51 @@
 import { NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis';
 
-// Simple in-memory state (will reset on server restart)
-// In production, you might want to use a database or file storage
-let beerMachineStatus: 'open' | 'closed' | 'underage' = 'closed';
-let openedAt: number | null = null;
-let closeTimeout: NodeJS.Timeout | null = null;
+const redis = Redis.fromEnv();
 
-const AUTO_CLOSE_DURATION = 30000; // 30 seconds in milliseconds
-const UNDERAGE_MESSAGE_DURATION = 5000; // 5 seconds for underage message
+const AUTO_CLOSE_DURATION = 30000; // 30 seconds
+const UNDERAGE_MESSAGE_DURATION = 5000; // 5 seconds
 
-function scheduleAutoClose() {
-  // Clear any existing timeout
-  if (closeTimeout) {
-    clearTimeout(closeTimeout);
-  }
+const KEY = 'selfbeer:status';
 
-  // Schedule automatic close after 30 seconds
-  closeTimeout = setTimeout(() => {
-    beerMachineStatus = 'closed';
-    openedAt = null;
-    closeTimeout = null;
-  }, AUTO_CLOSE_DURATION);
+interface StatusData {
+  status: 'open' | 'closed' | 'underage';
+  openedAt: number | null;
 }
 
-function scheduleUnderageTimeout() {
-  // Clear any existing timeout
-  if (closeTimeout) {
-    clearTimeout(closeTimeout);
-  }
-
-  // Schedule automatic close after 5 seconds for underage
-  closeTimeout = setTimeout(() => {
-    beerMachineStatus = 'closed';
-    openedAt = null;
-    closeTimeout = null;
-  }, UNDERAGE_MESSAGE_DURATION);
+async function getStatus(): Promise<StatusData> {
+  const data = await redis.get<StatusData>(KEY);
+  return data ?? { status: 'closed', openedAt: null };
 }
 
 export async function GET() {
+  const data = await getStatus();
+  let { status, openedAt } = data;
   let remainingTime = null;
 
-  if (beerMachineStatus === 'open' && openedAt) {
+  if (status === 'open' && openedAt) {
     const elapsed = Date.now() - openedAt;
     remainingTime = Math.max(0, AUTO_CLOSE_DURATION - elapsed);
-
-    // If time has expired, close it
     if (remainingTime === 0) {
-      beerMachineStatus = 'closed';
+      status = 'closed';
       openedAt = null;
-      if (closeTimeout) {
-        clearTimeout(closeTimeout);
-        closeTimeout = null;
-      }
+      await redis.set(KEY, { status, openedAt });
     }
-  } else if (beerMachineStatus === 'underage' && openedAt) {
+  } else if (status === 'underage' && openedAt) {
     const elapsed = Date.now() - openedAt;
     remainingTime = Math.max(0, UNDERAGE_MESSAGE_DURATION - elapsed);
-
-    // If time has expired, close it
     if (remainingTime === 0) {
-      beerMachineStatus = 'closed';
+      status = 'closed';
       openedAt = null;
-      if (closeTimeout) {
-        clearTimeout(closeTimeout);
-        closeTimeout = null;
-      }
+      await redis.set(KEY, { status, openedAt });
     }
   }
 
   return NextResponse.json({
-    status: beerMachineStatus,
+    status,
     timestamp: new Date().toISOString(),
     remainingTime,
-    openedAt: openedAt ? new Date(openedAt).toISOString() : null
+    openedAt: openedAt ? new Date(openedAt).toISOString() : null,
   });
 }
 
@@ -88,36 +61,27 @@ export async function POST(request: Request) {
       );
     }
 
-    beerMachineStatus = status;
+    const openedAt = status === 'closed' ? null : Date.now();
+    // Auto-expire the key so it self-cleans
+    const ttl = status === 'open' ? AUTO_CLOSE_DURATION / 1000 : status === 'underage' ? UNDERAGE_MESSAGE_DURATION / 1000 : 0;
 
-    if (status === 'open') {
-      openedAt = Date.now();
-      scheduleAutoClose();
-    } else if (status === 'underage') {
-      openedAt = Date.now();
-      scheduleUnderageTimeout();
+    if (status === 'closed') {
+      await redis.set(KEY, { status, openedAt });
     } else {
-      openedAt = null;
-      if (closeTimeout) {
-        clearTimeout(closeTimeout);
-        closeTimeout = null;
-      }
+      await redis.set(KEY, { status, openedAt }, { ex: Math.ceil(ttl) + 5 });
     }
 
     let remainingTime = null;
-    if (status === 'open') {
-      remainingTime = AUTO_CLOSE_DURATION;
-    } else if (status === 'underage') {
-      remainingTime = UNDERAGE_MESSAGE_DURATION;
-    }
+    if (status === 'open') remainingTime = AUTO_CLOSE_DURATION;
+    else if (status === 'underage') remainingTime = UNDERAGE_MESSAGE_DURATION;
 
     return NextResponse.json({
-      status: beerMachineStatus,
+      status,
       timestamp: new Date().toISOString(),
       remainingTime,
-      openedAt: openedAt ? new Date(openedAt).toISOString() : null
+      openedAt: openedAt ? new Date(openedAt).toISOString() : null,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Invalid request body' },
       { status: 400 }
