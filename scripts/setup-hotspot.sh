@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # setup-hotspot.sh — Pre-configures a phone hotspot for auto-connect.
-# Run once on the Pi: sudo bash scripts/setup-hotspot.sh
+# Run once on the Pi: sudo bash scripts/setup-hotspot.sh "Your SSID" "your-password"
 
-SSID="Iphone GL"
-PASS="1234567890"
+if [ $# -lt 2 ]; then
+  echo "Usage: sudo bash scripts/setup-hotspot.sh <SSID> <PASSWORD>"
+  echo "Example: sudo bash scripts/setup-hotspot.sh \"Iphone GL\" \"mypassword\""
+  exit 1
+fi
+
+SSID="$1"
+PASS="$2"
 
 echo "[setup-hotspot] Adding '$SSID' to NetworkManager..."
 nmcli connection add \
